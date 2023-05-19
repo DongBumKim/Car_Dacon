@@ -32,13 +32,10 @@ def train(args, model, train_loader, val_loader, optimizer, scheduler, device, c
             optimizer.zero_grad()
 
             
-            if args.model == "faster-rcnn":
-                loss_dict = model(images, targets)
-                print(loss_dict)
-                loss = sum(losses for losses in loss_dict.values())
-            else:
-                outputs = model(images)
-                loss = criterion(outputs,targets)
+            proposals, proposal_losses, class_logits, box_regression = model(images, targets)
+            print(targets)
+            print(proposal_losses)
+            loss = criterion(class_logits, box_regression,targets)
             
             loss.backward()
             optimizer.step()

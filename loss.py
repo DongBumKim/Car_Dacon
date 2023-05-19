@@ -1,35 +1,42 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-class FasterRCNNLoss(nn.Module):
+
+
+class FasterRCNNLoss:
     def __init__(self):
-        super(FasterRCNNLoss, self).__init__()
-    
+        pass
 
-    def forward(self, outputs, targets):
-        loss_list = []
-        for idx, outputs in enumerate(targets):
+    def forward(self, class_logits, box_regression, targets):
+        """
+        Computes the loss for Faster R-CNN.
 
-            
-            predict_regression = outputs['boxes']
-            predict_labels = outputs['labels']
+        Args:
+            class_logits (Tensor)
+            box_regression (Tensor)
+            labels (list[Tensor])
+            regression_targets (Tensor)
 
-            gt_regression = targets[idx]['boxes']
-            gt_labels = targets[idx]['labels']
+        Returns:
+            classification_loss (Tensor)
+            box_loss (Tensor)
+        """
 
-            
-        # Calculate classification (label) loss
-            classification_loss = F.cross_entropy(predict_labels, gt_labels)
+        labels = torch.cat(labels, dim=0)
+        regression_targets = torch.cat(regression_targets, dim=0)
 
-            # Calculate bounding box regression loss
-            regression_loss = F.smooth_l1_loss(predict_regression, gt_regression)
+        classification_loss = F.cross_entropy(class_logits, labels)
 
-            # Total loss
-            loss = classification_loss + regression_loss
-            loss_list.append(loss)
-            
-        print(len(loss_list))
-        
-        total_loss = np.mean(loss_list)
-        return total_loss
+        sampled_pos_inds_subset = torch.where(labels > 0)[0]
+        labels_pos = labels[sampled_pos_inds_subset]
+        N, num_classes = class_logits.shape
+        box_regression = box_regression.reshape(N, box_regression.size(-1) // 4, 4)
+
+        box_loss = F.smooth_l1_loss(
+            box_regression[sampled_pos_inds_subset, labels_pos],
+            regression_targets[sampled_pos_inds_subset],
+            beta=1 / 9,
+            reduction="sum",
+        )
+        box_loss = box_loss / labels.numel()
+
+        return classification_loss, box_loss

@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 import random
 
 from batch_engine import train, inference
-from model import build_model
+from model import build_model, CustomFasterRCNN
 from util import determine_all_seed, draw_boxes_on_image, collate_fn
 from config import argument_parser
 from config_dataset import CustomDataset, get_train_transforms, get_test_transforms
@@ -67,8 +67,8 @@ test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False
 # ## Train & Validation
 print("Build Model")
 
-model = build_model(args)
-
+#model = build_model(args)
+model = CustomFasterRCNN(args)
 
 
 
